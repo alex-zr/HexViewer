@@ -3,6 +3,7 @@ package ua.com.al1.hexviewer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -26,7 +27,11 @@ public class Main extends JFrame {
 	private JBinaryViewer binaryViewer = new JBinaryViewer();
 	private JScrollPane binaryViewerView;
 
-	private Main() {
+	private Main(File file) {
+		if(file != null && file.exists()) {
+			this.file = file;
+		}
+		
 		setTitle("File hex viewer");
 		try {
 			LogManager.getLogManager().readConfiguration(          
@@ -41,6 +46,11 @@ public class Main extends JFrame {
 		createMenu();
 
 		startRefreshThread();
+		
+		binaryViewer.setData(new byte[]{});
+		binaryViewerView = new JScrollPane(binaryViewer);
+		binaryViewerView.getVerticalScrollBar().setValue(0);
+		setContentPane(binaryViewerView);
 	}
 
 	private void startRefreshThread() {
@@ -64,8 +74,6 @@ public class Main extends JFrame {
 								log.info("last update: " + lastModified);
 								log.info("last file update: "
 										+ file.lastModified());
-								binaryViewerView.getVerticalScrollBar()
-										.setValue(0);
 								log.info("Free memory: "
 										+ Runtime.getRuntime().freeMemory());
 							}
@@ -90,9 +98,7 @@ public class Main extends JFrame {
 			lastModified = file.lastModified();
 			final byte[] data = Tool.readClassFile(file);
 			binaryViewer.setData(data);
-			binaryViewerView = new JScrollPane(binaryViewer);
-			binaryViewerView.getVerticalScrollBar().setValue(0);
-			setContentPane(binaryViewerView);
+
 			setVisible(true);
 		}
 		return binaryViewerView;
@@ -128,6 +134,18 @@ public class Main extends JFrame {
 	}
 
 	public static void main(String[] args) {
+		File file = null;
+		if(args.length == 1 && !"".equals(args[0])) {
+			try {
+				file = new File(args[0]);
+				if(!file.exists()) {
+					throw new FileNotFoundException(args[0]);
+				}
+			} catch(Exception e) {
+				log.log(Level.SEVERE, "Can't read file " + file.getName(), e);
+			}
+		}
+		final File fileArg = file;
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (ClassNotFoundException ex) {
@@ -142,7 +160,7 @@ public class Main extends JFrame {
 
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				new Main().setVisible(true);
+				new Main(fileArg).setVisible(true);
 			}
 		});
 	}
